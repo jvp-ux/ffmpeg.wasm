@@ -1,0 +1,36 @@
+<div class="max-w-screen-xl mx-auto px-4 md:px-8">
+  <div class="items-start justify-between py-4 border-b md:flex">
+    <div class="max-w-lg">
+      <h3 class="text-gray-800 text-2xl font-bold">Transcode webm to mp4 video</h3>
+      <!-- <p class="text-gray-600 mt-2">Lorem Ipsum is simply dummy text of the printing and typesetting industry.</p> -->
+    </div>
+    <div class="mt-6 md:mt-0">
+      <button type="button" (click)="load()" *ngIf="!loaded"
+        class="block px-4 py-2 text-center text-white duration-150 font-medium bg-indigo-600 rounded-lg hover:bg-indigo-500 active:bg-indigo-700 md:text-sm"
+        rel="nofollow">
+        Load ffmpeg-core (~31 MB)
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="showProgress">
+    {{progressMsg}}
+  </div>
+
+  <div *ngIf="loaded">
+    <video #videoRef controls></video><br/>
+    <button
+      class="block px-4 py-2 text-center text-white duration-150 font-medium bg-indigo-600 rounded-lg hover:bg-indigo-500 active:bg-indigo-700 md:text-sm"
+      (click)="transcode()">Transcode webm to mp4</button>
+    <p>{{transcodeLog}}</p>
+    <p>Open Developer Tools (Ctrl+Shift+I) to View Logs</p>
+  </div>
+</div>
+
+
+<!-- <video ref={videoRef} controls></video><br/>
+<button onClick={transcode}>Transcode webm to mp4</button>
+<p ref={messageRef}></p>
+<p>Open Developer Tools (Ctrl+Shift+I) to View Logs</p>
+
+<button onClick={load}>Load ffmpeg-core (~31 MB)</button> -->

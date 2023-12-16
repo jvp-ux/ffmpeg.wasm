@@ -1,0 +1,37 @@
+<div class="max-w-screen-xl mx-auto px-4 md:px-8">
+  <div class="items-start justify-between py-4 border-b md:flex">
+    <div class="max-w-lg">
+      <h3 class="text-gray-800 text-2xl font-bold">Snip video</h3>
+      <!-- <p class="text-gray-600 mt-2">Lorem Ipsum is simply dummy text of the printing and typesetting industry.</p> -->
+    </div>
+    <div class="mt-6 md:mt-0">
+      <button type="button" (click)="load()" *ngIf="!loaded"
+        class="block px-4 py-2 text-center text-white duration-150 font-medium bg-indigo-600 rounded-lg hover:bg-indigo-500 active:bg-indigo-700 md:text-sm"
+        rel="nofollow">
+        Load ffmpeg-core (~31 MB)
+      </button>
+      <button type="button" (click)="transcode()" *ngIf="loaded"
+        class="block px-4 py-2 text-center text-white duration-150 font-medium bg-indigo-600 rounded-lg hover:bg-indigo-500 active:bg-indigo-700 md:text-sm"
+        rel="nofollow">
+        Cut
+      </button>
+    </div>
+  </div>
+
+  <p *ngIf="showProgress">Show progress</p>
+
+  <p *ngIf="loaded">Loaded!</p>
+
+  <mat-slider min="0" max="5" step="1" (input)="showValues($event)">
+    <input matSliderStartThumb value="0" [(ngModel)]="startValue">
+    <input matSliderEndThumb value="5" [(ngModel)]="endValue">
+  </mat-slider>
+
+  <div *ngIf="loaded">
+    <video #videoRef controls></video><br/>
+    <p>{{transcodeLog}}</p>
+    <p>Open Developer Tools (Ctrl+Shift+I) to View Logs</p>
+    <img [src]='frames'>
+  </div>
+
+</div>
