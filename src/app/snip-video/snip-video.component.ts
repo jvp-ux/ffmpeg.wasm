@@ -9,47 +9,87 @@ import { FormsModule } from '@angular/forms';
 @Component({
   selector: 'app-snip-video',
   standalone: true,
-  imports: [CommonModule,MatSliderModule, FormsModule],
+  imports: [CommonModule, MatSliderModule, FormsModule],
   templateUrl: './snip-video.component.html',
   styleUrl: './snip-video.component.css'
 })
 export class SnipVideoComponent extends LoadComponent {
   @ViewChild('videoRef') videoRef!: ElementRef<HTMLVideoElement>;
-  startValue=0;
-  endValue=10;
-  frames:any;
-  constructor(
-    // private fileSvc:LoadFilesService
-  ) {
+  @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
+  
+  startValue = 0;
+  endValue = 10;
+  maxDuration = 120; // Default max duration in seconds
+  frames: any;
+  videoFile: File | null = null;
+  downloadURL: string | null = null;
+
+  constructor() {
     super();
   }
 
-  async transcode() {
-    // await this.ffmpegRef.writeFile('input.webm', await fetchFile('https://raw.githubusercontent.com/ffmpegwasm/testdata/master/Big_Buck_Bunny_180_10s.webm'));
-    await this.ffmpegRef.writeFile('input.webm', await fetchFile('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'));
-    // await this.ffmpegRef.exec(['-i', 'input.webm', 'output.mp4']);
-    await this.ffmpegRef.exec([
-      '-i', 'input.webm',
-      '-ss', '00:00:02',
-      '-t', '00:00:05',
-      // '-c:v libx264',
-      // '-c:a aac',
-      // '-strict experimental',
-      'output.mp4'
-    ]);
-    const data = await this.ffmpegRef.readFile('output.mp4') as Uint8Array;
-    await this.ffmpegRef.exec([
-      '-i','output.mp4',
-      '-frames','1', '-vf','fps=1,scale=100:-2,tile=5x1',
-      'frames.png'
-    ])
-    const videoFrames = await this.ffmpegRef.readFile('frames.png') as Uint8Array;
-    console.log('frames',videoFrames);
-    this.frames = URL.createObjectURL(new Blob([videoFrames.buffer],{type:'image/png'}));
-    this.videoRef.nativeElement.src = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+  onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      this.videoFile = input.files[0];
+      this.loadVideo();
+    }
   }
 
-  showValues($event:any){
-    console.log(this.startValue,this.endValue);
+  loadVideo() {
+    if (this.videoFile) {
+      const videoElement = this.videoRef.nativeElement;
+      videoElement.src = URL.createObjectURL(this.videoFile);
+      videoElement.onloadedmetadata = () => {
+        this.maxDuration = Math.floor(videoElement.duration);
+        this.endValue = this.maxDuration;
+        console.log(`Video duration: ${this.maxDuration} seconds`);
+      };
+    }
+  }
+
+  async transcode() {
+    if (!this.videoFile) {
+      console.error('No video file selected');
+      return;
+    }
+
+    const startTime = this.formatTime(this.startValue);
+    const duration = this.formatTime(this.endValue - this.startValue);
+    
+    await this.ffmpegRef.writeFile('input.mp4', await fetchFile(this.videoFile));
+    await this.ffmpegRef.exec([
+      '-i', 'input.mp4',
+      '-ss', startTime,
+      '-t', duration,
+      'output.mp4'
+    ]);
+
+    const data = await this.ffmpegRef.readFile('output.mp4');
+    const blob = new Blob([data], { type: 'video/mp4' });
+    this.downloadURL = URL.createObjectURL(blob);
+    this.videoRef.nativeElement.src = this.downloadURL;
+    console.log('Transcoding complete. Video URL created.');
+  }
+
+  downloadVideo() {
+    if (this.downloadURL) {
+      const a = document.createElement('a');
+      a.href = this.downloadURL;
+      a.download = 'trimmed_video.mp4';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  }
+
+  formatTime(seconds: number): string {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `00:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }
+
+  showValues() {
+    console.log(this.startValue, this.endValue);
   }
 }
