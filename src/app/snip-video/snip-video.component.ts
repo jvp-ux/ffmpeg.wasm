@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, inject } from '@angular/core';
+import { Component, ElementRef, ViewChild, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LoadComponent } from '../load.component';
 import { fetchFile } from '@ffmpeg/util';
@@ -13,10 +13,9 @@ import { FormsModule } from '@angular/forms';
   templateUrl: './snip-video.component.html',
   styleUrl: './snip-video.component.css'
 })
-export class SnipVideoComponent extends LoadComponent {
+export class SnipVideoComponent extends LoadComponent implements OnInit {
   @ViewChild('videoRef') videoRef!: ElementRef<HTMLVideoElement>;
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
-  
   startValue = 0;
   endValue = 10;
   maxDuration = 120; // Default max duration in seconds
