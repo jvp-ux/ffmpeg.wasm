@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { LoadComponent } from '../load.component';
 import { MatSliderModule } from '@angular/material/slider';
 import { FormsModule } from '@angular/forms';
+import { toBlobURL, fetchFile } from '@ffmpeg/util';
 
 @Component({
   selector: 'app-snip-video',
@@ -21,19 +22,37 @@ export class SnipVideoComponent extends LoadComponent implements OnInit {
   videoFile: File | null = null;
   downloadURL: string | null = null;
   private worker: Worker | null = null;
+  isTranscoding = false;
 
-  constructor() {
-    super();
+  async ngOnInit() {
+    await this.load(); // This loads FFmpeg
+    this.initializeWorker();
   }
 
-  ngOnInit() {
+  private initializeWorker() {
     this.worker = new Worker(new URL('../workers/transcode-hero.worker', import.meta.url), { type: 'module' });
     this.worker.onmessage = ({ data }) => {
-      const { outputData } = data;
-      const blob = new Blob([outputData], { type: 'video/mp4' });
-      this.downloadURL = URL.createObjectURL(blob);
-      this.videoRef.nativeElement.src = this.downloadURL;
-      console.log('Transcoding complete. Video URL created.');
+      switch (data.type) {
+        case 'progress':
+          this.progressValue = Math.round(data.progress * 100);
+          this.progressMsg = `${this.progressValue}% (transcoded time: ${data.time / 1000000} s)`;
+          this.showProgress = true;
+          console.log(`Progress: ${this.progressValue}%, Time: ${data.time}`);
+          break;
+        case 'complete':
+          const blob = new Blob([data.outputData], { type: 'video/mp4' });
+          this.downloadURL = URL.createObjectURL(blob);
+          this.videoRef.nativeElement.src = this.downloadURL;
+          this.isTranscoding = false;
+          this.showProgress = false;
+          console.log('Transcoding complete. Video URL created.');
+          break;
+        case 'error':
+          console.error('Worker error:', data.error);
+          this.isTranscoding = false;
+          this.showProgress = false;
+          break;
+      }
     };
   }
 
@@ -57,16 +76,72 @@ export class SnipVideoComponent extends LoadComponent implements OnInit {
     }
   }
 
-  async transcode() {
-    if (!this.videoFile || !this.worker) {
-      console.error('No video file selected or worker not initialized');
+  async transcodeWithApp() {
+    if (!this.videoFile || !this.loaded) {
+      console.error('No video file selected or FFmpeg not loaded');
       return;
     }
+
+    this.isTranscoding = true;
+    this.progressValue = 0;
+    this.progressMsg = '';
+    this.showProgress = true;
+
+    const startTime = this.formatTime(this.startValue);
+    const duration = this.formatTime(this.endValue - this.startValue);
+
+    try {
+      await this.ffmpegRef.writeFile('input.mp4', await fetchFile(this.videoFile));
+      await this.ffmpegRef.exec([
+        '-i', 'input.mp4',
+        '-ss', startTime,
+        '-t', duration,
+        'output.mp4'
+      ]);
+      const data = await this.ffmpegRef.readFile('output.mp4') as Uint8Array;
+      await this.ffmpegRef.exec([
+        '-i', 'output.mp4',
+        '-frames', '1', '-vf', 'fps=1,scale=100:-2,tile=5x1',
+        'frames.png'
+      ]);
+      const videoFrames = await this.ffmpegRef.readFile('frames.png') as Uint8Array;
+      this.frames = URL.createObjectURL(new Blob([videoFrames.buffer], { type: 'image/png' }));
+      this.downloadURL = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+      this.videoRef.nativeElement.src = this.downloadURL;
+    } catch (error) {
+      console.error('Error during transcoding:', error);
+    } finally {
+      this.isTranscoding = false;
+      this.showProgress = false;
+    }
+  }
+
+  async transcode() {
+    if (!this.videoFile || !this.worker || !this.loaded) {
+      console.error('No video file selected, worker not initialized, or FFmpeg not loaded');
+      return;
+    }
+
+    this.isTranscoding = true;
+    this.progressValue = 0;
+    this.progressMsg = '';
+    this.showProgress = true;
 
     const startTime = this.formatTime(this.startValue);
     const duration = this.formatTime(this.endValue - this.startValue);
     
+    // Send the FFmpeg configuration to the worker
     this.worker.postMessage({
+      type: 'init',
+      config: {
+        coreURL: await toBlobURL(`${this.baseURLCore}/ffmpeg-core.js`, 'text/javascript'),
+        wasmURL: await toBlobURL(`${this.baseURLCore}/ffmpeg-core.wasm`, 'application/wasm')
+      }
+    });
+
+    // Send the transcoding request to the worker
+    this.worker.postMessage({
+      type: 'transcode',
       videoFile: this.videoFile,
       startTime,
       duration

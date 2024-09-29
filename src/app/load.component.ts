@@ -25,6 +25,8 @@ export class LoadComponent {
 
   private workerBypassSvc
   private fileSvc
+  protected baseURLCore = 'https://unpkg.com/@ffmpeg/core@0.12.3/dist/umd';
+
   constructor(
   ) {
     this.workerBypassSvc = inject(WorkerBypassService);

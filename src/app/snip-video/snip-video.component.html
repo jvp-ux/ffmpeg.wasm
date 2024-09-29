@@ -28,14 +28,22 @@
 
     <p>Start: {{ formatTime(startValue) }} - End: {{ formatTime(endValue) }}</p>
 
-    <button type="button" (click)="transcode()"
-      class="block px-4 py-2 mt-4 text-center text-white duration-150 font-medium bg-indigo-600 rounded-lg hover:bg-indigo-500 active:bg-indigo-700 md:text-sm"
-      rel="nofollow">
-      Cut
-    </button>
+    <div class="flex space-x-4 mt-4">
+      <button type="button" (click)="transcodeWithApp()"
+        class="block px-4 py-2 text-center text-white duration-150 font-medium bg-indigo-600 rounded-lg hover:bg-indigo-500 active:bg-indigo-700 md:text-sm"
+        rel="nofollow">
+        Cut with App
+      </button>
+
+      <button type="button" (click)="transcode()"
+        class="block px-4 py-2 text-center text-white duration-150 font-medium bg-green-600 rounded-lg hover:bg-green-500 active:bg-green-700 md:text-sm"
+        rel="nofollow">
+        Cut with Worker
+      </button>
+    </div>
 
     <button *ngIf="downloadURL" (click)="downloadVideo()"
-      class="block px-4 py-2 mt-4 text-center text-white duration-150 font-medium bg-green-600 rounded-lg hover:bg-green-500 active:bg-green-700 md:text-sm"
+      class="block px-4 py-2 mt-4 text-center text-white duration-150 font-medium bg-blue-600 rounded-lg hover:bg-blue-500 active:bg-blue-700 md:text-sm"
       rel="nofollow">
       Download Trimmed Video
     </button>
@@ -43,5 +51,10 @@
     <p>{{transcodeLog}}</p>
     <p>Open Developer Tools (Ctrl+Shift+I) to View Logs</p>
     <img [src]='frames'>
+  </div>
+
+  <div *ngIf="showProgress">
+    <p>{{ progressMsg }}</p>
+    <progress [value]="progressValue" max="100"></progress>
   </div>
 </div>
