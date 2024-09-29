@@ -23,7 +23,7 @@ export class SnipVideoComponent extends LoadComponent implements OnInit {
   downloadURL: string | null = null;
   private worker: Worker | null = null;
   isTranscoding = false;
-
+  
   async ngOnInit() {
     await this.load(); // This loads FFmpeg
     this.initializeWorker();
@@ -172,11 +172,17 @@ export class SnipVideoComponent extends LoadComponent implements OnInit {
   async fastTrim() {
     if (!this.videoFile) {
       console.error('Please select a video file first.');
+      this.transcodeLog = 'Please select a video file first.';
       return;
     }
 
     const inputFileName = 'input.mp4';
     const outputFileName = 'output.mp4';
+
+    this.isTranscoding = true;
+    this.progressValue = 0;
+    this.progressMsg = 'Starting fast trim...';
+    this.transcodeLog = null; // Clear previous log
 
     try {
       await this.ffmpegRef.writeFile(inputFileName, await fetchFile(this.videoFile));
@@ -185,6 +191,11 @@ export class SnipVideoComponent extends LoadComponent implements OnInit {
       const duration = this.endValue - this.startValue;
 
       console.log(`Trimming from ${startTime} for ${duration} seconds`);
+
+      this.ffmpegRef.on('progress', ({ progress }) => {
+        this.progressValue = Math.round(progress * 100);
+        this.progressMsg = `Trimming: ${this.progressValue}%`;
+      });
 
       await this.ffmpegRef.exec([
         '-ss', startTime.toString(),
@@ -199,14 +210,35 @@ export class SnipVideoComponent extends LoadComponent implements OnInit {
       const blob = new Blob([data], { type: 'video/mp4' });
       this.downloadURL = URL.createObjectURL(blob);
       console.log('Fast trim with app completed!');
+      this.transcodeLog = 'Fast trim completed successfully!';
     } catch (error) {
       console.error('Error during fast trim:', error);
+      this.transcodeLog = `Error during fast trim: ${error}`;
+    } finally {
+      this.isTranscoding = false;
+      this.progressMsg = '';
     }
   }
 
   ngOnDestroy() {
     if (this.downloadURL) {
       URL.revokeObjectURL(this.downloadURL);
+    }
+  }
+
+  onVideoLoaded() {
+    const video = this.videoRef.nativeElement;
+    this.maxDuration = Math.floor(video.duration);
+    this.endValue = this.maxDuration;
+    console.log(`Video duration: ${this.maxDuration} seconds`);
+  }
+
+  onSliderChange(thumb: 'start' | 'end') {
+    const video = this.videoRef.nativeElement;
+    if (thumb === 'start') {
+      video.currentTime = this.startValue;
+    } else {
+      video.currentTime = this.endValue;
     }
   }
 }

@@ -14,7 +14,7 @@ declare var FFmpegWASM: any;
 export class LoadComponent {
   loaded = false;
   ffmpegRef = new FFmpeg();
-  transcodeLog = null;
+  transcodeLog: string | null = null;
   messageRef = "";
   progressMsg = "";
   progressValue = 0;
