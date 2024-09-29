@@ -14,7 +14,7 @@
 
   <p *ngIf="showProgress">Show progress</p>
 
-  <p *ngIf="loaded">Loaded!</p>
+  
 
   <div *ngIf="loaded">
     <input type="file" #fileInput (change)="onFileSelected($event)" accept="video/*" class="mb-4">
@@ -40,6 +40,12 @@
         rel="nofollow">
         Cut with Worker
       </button>
+
+      <button type="button" (click)="fastTrim()"
+        class="block px-4 py-2 text-center text-white duration-150 font-medium bg-purple-600 rounded-lg hover:bg-purple-500 active:bg-purple-700 md:text-sm"
+        rel="nofollow">
+        FAST TRIM WITH APP
+      </button>
     </div>
 
     <button *ngIf="downloadURL" (click)="downloadVideo()"
@@ -57,4 +63,6 @@
     <p>{{ progressMsg }}</p>
     <progress [value]="progressValue" max="100"></progress>
   </div>
+
+  <pre>{{ transcodeLog }}</pre>
 </div>

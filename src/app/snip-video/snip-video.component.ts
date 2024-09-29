@@ -168,4 +168,45 @@ export class SnipVideoComponent extends LoadComponent implements OnInit {
   showValues() {
     console.log(this.startValue, this.endValue);
   }
+
+  async fastTrim() {
+    if (!this.videoFile) {
+      console.error('Please select a video file first.');
+      return;
+    }
+
+    const inputFileName = 'input.mp4';
+    const outputFileName = 'output.mp4';
+
+    try {
+      await this.ffmpegRef.writeFile(inputFileName, await fetchFile(this.videoFile));
+
+      const startTime = this.startValue;
+      const duration = this.endValue - this.startValue;
+
+      console.log(`Trimming from ${startTime} for ${duration} seconds`);
+
+      await this.ffmpegRef.exec([
+        '-ss', startTime.toString(),
+        '-i', inputFileName,
+        '-t', duration.toString(),
+        '-c', 'copy',
+        '-avoid_negative_ts', 'make_zero',
+        outputFileName
+      ]);
+
+      const data = await this.ffmpegRef.readFile(outputFileName);
+      const blob = new Blob([data], { type: 'video/mp4' });
+      this.downloadURL = URL.createObjectURL(blob);
+      console.log('Fast trim with app completed!');
+    } catch (error) {
+      console.error('Error during fast trim:', error);
+    }
+  }
+
+  ngOnDestroy() {
+    if (this.downloadURL) {
+      URL.revokeObjectURL(this.downloadURL);
+    }
+  }
 }
