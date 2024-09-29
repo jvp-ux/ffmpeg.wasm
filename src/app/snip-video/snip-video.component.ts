@@ -27,6 +27,12 @@ export class SnipVideoComponent extends LoadComponent implements OnInit {
     super();
   }
 
+  ngOnInit() {
+    // Initialize component here
+    // For example, you might want to call this.load() here if it's defined in LoadComponent
+    // super.load();
+  }
+
   onFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
