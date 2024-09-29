@@ -1,9 +1,7 @@
-import { Component, ElementRef, ViewChild, inject, OnInit } from '@angular/core';
+import { Component, ElementRef, ViewChild, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LoadComponent } from '../load.component';
-import { fetchFile } from '@ffmpeg/util';
-
-import {MatSliderModule} from '@angular/material/slider';
+import { MatSliderModule } from '@angular/material/slider';
 import { FormsModule } from '@angular/forms';
 
 @Component({
@@ -18,19 +16,25 @@ export class SnipVideoComponent extends LoadComponent implements OnInit {
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
   startValue = 0;
   endValue = 10;
-  maxDuration = 120; // Default max duration in seconds
+  maxDuration = 120;
   frames: any;
   videoFile: File | null = null;
   downloadURL: string | null = null;
+  private worker: Worker | null = null;
 
   constructor() {
     super();
   }
 
   ngOnInit() {
-    // Initialize component here
-    // For example, you might want to call this.load() here if it's defined in LoadComponent
-    // super.load();
+    this.worker = new Worker(new URL('../workers/transcode-hero.worker', import.meta.url), { type: 'module' });
+    this.worker.onmessage = ({ data }) => {
+      const { outputData } = data;
+      const blob = new Blob([outputData], { type: 'video/mp4' });
+      this.downloadURL = URL.createObjectURL(blob);
+      this.videoRef.nativeElement.src = this.downloadURL;
+      console.log('Transcoding complete. Video URL created.');
+    };
   }
 
   onFileSelected(event: Event) {
@@ -54,27 +58,19 @@ export class SnipVideoComponent extends LoadComponent implements OnInit {
   }
 
   async transcode() {
-    if (!this.videoFile) {
-      console.error('No video file selected');
+    if (!this.videoFile || !this.worker) {
+      console.error('No video file selected or worker not initialized');
       return;
     }
 
     const startTime = this.formatTime(this.startValue);
     const duration = this.formatTime(this.endValue - this.startValue);
     
-    await this.ffmpegRef.writeFile('input.mp4', await fetchFile(this.videoFile));
-    await this.ffmpegRef.exec([
-      '-i', 'input.mp4',
-      '-ss', startTime,
-      '-t', duration,
-      'output.mp4'
-    ]);
-
-    const data = await this.ffmpegRef.readFile('output.mp4');
-    const blob = new Blob([data], { type: 'video/mp4' });
-    this.downloadURL = URL.createObjectURL(blob);
-    this.videoRef.nativeElement.src = this.downloadURL;
-    console.log('Transcoding complete. Video URL created.');
+    this.worker.postMessage({
+      videoFile: this.videoFile,
+      startTime,
+      duration
+    });
   }
 
   downloadVideo() {
